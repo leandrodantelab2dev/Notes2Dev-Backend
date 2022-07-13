@@ -45,7 +45,7 @@ def getTipoNota():
             connection.close()
             print("MySQL connection is closed")
 
-def getDashboard():
+def getDashboard(gestor=False):
     try:
         connection = getConn()
         if connection.is_connected():
@@ -70,8 +70,10 @@ def getDashboard():
                             and notapos.tipo = '2'
                             LEFT JOIN nota as notaneg
                             on notaneg.colaborador = colaborador.email
-                            and notaneg.tipo = '1'
-                            group by colaborador.nome, colaborador.email"""
+                            and notaneg.tipo = '1'"""
+            if gestor !=  False:
+                select_dashboard += f""" WHERE colaborador.gestor = '{gestor}'"""
+            select_dashboard += """group by colaborador.nome, colaborador.email"""
             cursor = connection.cursor()
             cursor.execute(select_dashboard)
             row_headers=[x[0] for x in cursor.description] #this will extract row headers
@@ -88,11 +90,14 @@ def getDashboard():
             connection.close()
             print("MySQL connection is closed")
 
-def getColaborador():
+def getColaborador(gestor=False):
     try:
         connection = getConn()
         if connection.is_connected():
             select_employee = """SELECT * FROM colaborador"""
+            if gestor !=  False:
+                select_employee += f""" WHERE gestor = '{gestor}'"""
+            select_employee += """ ORDER BY nome DESC """
             cursor = connection.cursor()
             cursor.execute(select_employee)
             row_headers=[x[0] for x in cursor.description] #this will extract row headers
@@ -109,13 +114,15 @@ def getColaborador():
             connection.close()
             print("MySQL connection is closed")
 
-def getNota(colab=False):
+def getNota(colab=False,gestor=False):
     try:
         connection = getConn()
         if connection.is_connected():
-            select_employee = """SELECT * FROM nota """
+            select_employee = """SELECT * FROM nota WHERE 1=1 """
             if colab != False:
-                select_employee += f""" WHERE colaborador = '{colab}'"""
+                select_employee += f""" AND colaborador = '{colab}'"""
+            if gestor !=  False:
+                select_employee += f""" AND gestor = '{gestor}'"""
             select_employee += """ORDER BY data DESC """
             cursor = connection.cursor()
             cursor.execute(select_employee)
@@ -184,7 +191,10 @@ def addNota(jObj):
 @app.route('/api/get/colaboradores', methods=['GET'])
 def apiGetColaboradores():
     try:
-        content = getColaborador()
+        gestor = False 
+        if request.args.get('$gestor'):
+            gestor = request.args.get('$gestor')
+        content = getColaborador(gestor)
         print(content)
         return  Response(content,status=200, mimetype="application/json")
     except Exception as e:
@@ -205,7 +215,10 @@ def apiGetNota():
         colab = False 
         if request.args.get('$colaborador'):
             colab = request.args.get('$colaborador')
-        content = getNota(colab)
+        gestor = False 
+        if request.args.get('$gestor'):
+            gestor = request.args.get('$gestor')
+        content = getNota(colab,gestor)
         print(content)
         return  Response(content,status=200, mimetype="application/json")
     except Exception as e:
@@ -243,7 +256,10 @@ def apiAddNota():
 @cross_origin()
 def apiGetDashboard():
     try:
-        content = getDashboard()
+        gestor = False 
+        if request.args.get('$gestor'):
+            gestor = request.args.get('$gestor')
+        content = getDashboard(gestor)
         print(content)
         return  Response(content,status=200, mimetype="application/json")
     except Exception as e:
